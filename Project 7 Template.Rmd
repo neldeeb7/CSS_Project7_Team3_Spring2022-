@@ -20,7 +20,7 @@ pacman::p_load(# Tidyverse packages including dplyr and ggplot2
 set.seed(44)
 
 # load data
-medicaid_expansion <- read_csv('../data/medicaid_expansion.csv')
+medicaid_expansion <- read_csv('medicaid_expansion.csv')
 ```
 
 # Introduction
@@ -70,6 +70,9 @@ Create plots and provide 1-2 sentence analyses to answer the following questions
 Do the following:
 
 - Choose a state that adopted the Medicaid expansion on January 1, 2014 and a state that did not. **Hint**: Do not pick Massachusetts as it passed a universal healthcare law in 2006, and also avoid picking a state that adopted the Medicaid expansion between 2014 and 2015.
+-- States that adopted the expansion on January 1, 2014 include Arizona, Arkansas, California, Delaware, DC, Hawaii, Illinois, Iowa, Maryland, Minnesota, Nevada, New Jersey, New Mexico, New York, North Dakota, Ohio, Oregon, Rhode Island, Vermont, Washington, West Virginia. (Do not pick Kentucky because the date of adoption is listed at January 1, 2014, but in 2015 Kentucky got a new governor who dismantled it.)
+-- States that never adopted the expansion: Alabama, Florida, Georgia, Kansas, Maine, Mississippi, Missouri, North Carolina, Oklahoma, South Carolina, South Dakota, Tennessee, Texas, Wisconsin, Wyoming.
+
 - Assess the parallel trends assumption for your choices using a plot. If you are not satisfied that the assumption has been met, pick another state and try again (but detail the states you tried).
 
 ```{r}
