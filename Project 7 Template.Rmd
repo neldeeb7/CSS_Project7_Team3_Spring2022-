@@ -107,6 +107,8 @@ Do the following:
 
 ```{r}
 # non-augmented synthetic control
+syn = gsynth(uninsured_rate ~ year, medicaid_expansion, )
+
 ```
 
 - Re-run the same analysis but this time use an augmentation (default choices are Ridge, Matrix Completion, and GSynth). Create the same plot and report the average ATT and L2 imbalance.
