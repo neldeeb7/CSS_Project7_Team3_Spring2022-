@@ -14,7 +14,9 @@ pacman::p_load(# Tidyverse packages including dplyr and ggplot2
                tidyverse,
                ggthemes,
                augsynth,
-               gsynth)
+               gsynth, 
+               directlabels)
+
 
 # set seed
 set.seed(44)
@@ -22,6 +24,7 @@ set.seed(44)
 # load data
 medicaid_expansion <- read_csv('medicaid_expansion.csv')
 ```
+
 
 # Introduction
 
@@ -55,13 +58,102 @@ Create plots and provide 1-2 sentence analyses to answer the following questions
 - Which states were home to most uninsured Americans prior to 2014? How about in the last year in the data set? **Note**: 2010 state population is provided as a variable to answer this question. In an actual study you would likely use population estimates over time, but to simplify you can assume these numbers stay about the same.
 
 ```{r}
-# highest and lowest uninsured rates
+#explore data
+head(medicaid_expansion)
+summary(medicaid_expansion)
 ```
+
+
+```{r}
+# highest and lowest uninsured rates prior to 2014
+
+#bar plots for 2008-2013
+
+#2008
+bar_2008 <- ggplot(medicaid_expansion %>% filter(year == '2008'),
+                   aes(State, uninsured_rate)) + geom_col() +
+  ggtitle('Uninsured Rate Per State in 2008') +
+  xlab('State') +
+  ylab('Uninsured rate') +
+  theme(axis.text.x = element_text(
+    size = 8, angle = 90))
+bar_2008
+
+#2009
+bar_2009 <- ggplot(medicaid_expansion %>% filter(year == '2009'),
+                   aes(State, uninsured_rate)) +
+  geom_col() +
+  ggtitle('Uninsured Rate Per State in 2009') +
+  xlab('State') +
+  ylab('Uninsured rate') +
+  theme(axis.text.x = element_text(
+    size = 8, angle = 90))
+bar_2009
+
+#2010
+bar_2010 <- ggplot(medicaid_expansion %>% filter(year == '2010'),
+                   aes(State, uninsured_rate)) +
+  geom_col() +
+  ggtitle('Uninsured Rate Per State in 2010') +
+  xlab('State') +
+  ylab('Uninsured rate') +
+  theme(axis.text.x = element_text(
+    size = 8, angle = 90))
+bar_2010
+
+#2011
+bar_2011 <- ggplot(medicaid_expansion %>% filter(year == '2011'),
+                   aes(State, uninsured_rate)) +
+  geom_col() +
+  ggtitle('Uninsured Rate Per State in 2011') +
+  xlab('State') +
+  ylab('Uninsured rate') +
+  theme(axis.text.x = element_text(
+    size = 8, angle = 90))
+bar_2011
+
+#2012
+bar_2012 <- ggplot(medicaid_expansion %>% filter(year == '2012'),
+                   aes(State, uninsured_rate)) +
+  geom_col() +
+  ggtitle('Uninsured Rate Per State in 2012') +
+  xlab('State') +
+  ylab('Uninsured rate') +
+  theme(axis.text.x = element_text(
+    size = 8, angle = 90))
+bar_2012
+
+#2013
+bar_2013 <- ggplot(medicaid_expansion %>% filter(year == '2013'),
+                   aes(State, uninsured_rate)) +
+  geom_col() +
+  ggtitle('Uninsured Rate Per State in 2013') +
+  xlab('State') +
+  ylab('Uninsured rate') +
+  theme(axis.text.x = element_text(
+    size = 8, angle = 90))
+bar_2013
+
+
+```
+Before 2014, the state that had the highest uninsured rate varied slightly. From 2008 to 2009, Utah had the highest uninsured rate, but from 2010 to 2013, Texas had the highest uninsured rate. From 2008 to 2013, Nevada had the second-highest uninsured rate. Alternatively, Massachusetts consistently had the lowest uninsured rate across all states for the entire period reported before 2014 (2008-2013). 
+
 
 ```{r}
 # most uninsured Americans
+
+#create new variable for uninsured Americans per state
+medicaid_expansion$pop_uninsured <- medicaid_expansion$uninsured_rate * medicaid_expansion$population 
+
+minmax <- medicaid_expansion %>% group_by(year) %>% 
+  summarize(min = min(pop_uninsured), 
+            minState = State[which.min(pop_uninsured)],
+            max =max(pop_uninsured), 
+            maxState = State[which.max(pop_uninsured)])
+View(minmax)
 ```
 
+Unsurprisingly, that California, the state with the largest population in the US, had the most uninsured population from 2008 to 2013. However, starting 2014, with California's adoption of the Medicaid Expansion, Texas had the most uninsured population until 2020 (the last year of available data). On the other hand, Wyoming had the least uninsured population from 2008 to 2009, but that shifted to Vermont from 2010 until 2020. 
 
 # Difference-in-Differences Estimation
 
@@ -70,6 +162,7 @@ Create plots and provide 1-2 sentence analyses to answer the following questions
 Do the following:
 
 - Choose a state that adopted the Medicaid expansion on January 1, 2014 and a state that did not. **Hint**: Do not pick Massachusetts as it passed a universal healthcare law in 2006, and also avoid picking a state that adopted the Medicaid expansion between 2014 and 2015.
+
 -- States that adopted the expansion on January 1, 2014 include Arizona, Arkansas, California, Delaware, DC, Hawaii, Illinois, Iowa, Maryland, Minnesota, Nevada, New Jersey, New Mexico, New York, North Dakota, Ohio, Oregon, Rhode Island, Vermont, Washington, West Virginia. (Do not pick Kentucky because the date of adoption is listed at January 1, 2014, but in 2015 Kentucky got a new governor who dismantled it.)
 -- States that never adopted the expansion: Alabama, Florida, Georgia, Kansas, Maine, Mississippi, Missouri, North Carolina, Oklahoma, South Carolina, South Dakota, Tennessee, Texas, Wisconsin, Wyoming.
 
@@ -77,23 +170,80 @@ Do the following:
 
 ```{r}
 # Parallel Trends plot
+
+#We also tried California-Texas, California-Pennsylvania
+
+medicaid_expansion %>%
+  filter(State %in% c("California","Florida")) %>%
+  ggplot() + 
+  geom_point(aes(x = year, 
+                 y = uninsured_rate, 
+                 color = State)) +
+  geom_line(aes(x = year, 
+                y = uninsured_rate, 
+                color = State)) +
+  geom_vline(aes(xintercept = 2014)) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text()) +
+  ggtitle('CA & FL Uninsured Rate Before and After Medicaid Expansion in 2014') +
+  xlab('Year') +
+  ylab('Uninsured Rate')
 ```
+The parallel trends plot for the uninsured rate over time between California and Florida seems to meet the assumption that the trends between the two states
+were relatively parallel prior to the treatment year, showing fairly similar slopes
+between 2008 to 2014. 
 
 - Estimates a difference-in-differences estimate of the effect of the Medicaid expansion on the uninsured share of the population. You may follow the lab example where we estimate the differences in one pre-treatment and one post-treatment period, or take an average of the pre-treatment and post-treatment outcomes
 
 ```{r}
-# Difference-in-Differences estimation
-```
+# Difference-in-Differences estimation for uninsured rate
 
+# California - Florida 
+states_DiD <- medicaid_expansion %>%
+  filter(State %in% c("California","Florida")) %>%
+  filter(year >= 2013 & year<= 2015) 
+
+#pre-treatment difference, uninsured rate
+pre_diff_rate <- states_DiD %>%
+  filter(year == 2013) %>%
+  select(State, 
+         uninsured_rate) %>%
+  spread(State, 
+         uninsured_rate) %>%
+  summarise(California - Florida) 
+pre_diff_rate
+  
+# post-treatment difference, uninsured rate
+
+post_diff_rate <- states_DiD %>%
+  filter(year == 2015) %>%
+  select(State, 
+         uninsured_rate) %>%
+  spread(State, 
+         uninsured_rate) %>%
+  summarise(California - Florida) 
+post_diff_rate
+
+# diff-in-diffs, uninsured rate
+
+diff_in_diffs_rate <- post_diff_rate - pre_diff_rate
+diff_in_diffs_rate
+
+```
+Looking at the difference-in-differences estimation for the uninsured rate, the adoption of 2014 Medicaid expansion in California had a treatment effect of -0.02, or a 2% decrease in the rate of uninsured Americans.
 
 ## Discussion Questions
 
 - Card/Krueger's original piece utilized the fact that towns on either side of the Delaware river are likely to be quite similar to one another in terms of demographics, economics, etc. Why is that intuition harder to replicate with this data?
 - **Answer**:
+The intuition that neighboring towns are similar to each other is harder to replicate with this data because the units are states, which are vastly different in demographics, economy, etc. More significantly, states have their own governing bodies determining the adoption of federal legislation like the Affordable Care Act that are unrelated to their geographic location. 
 
 - What are the strengths and weaknesses of using the parallel trends assumption in difference-in-differences estimates?
-- **Answer**:
 
+- **Answer**:
+A key strength of using the parallel trends assumption in DiD estimates is that we can use the untreated or control group as the counterfactual to the treated group and visually ascertain that trends over time between groups before treatment are generally constant. If the assumption is met, we can take the pre and post-treatment of the untreated group and compare it to the treated group to measure the treatment effect. The assumption also considers both time and selection bias and produces one estimate.
+
+A critical weakness of this assumption is that there is no method to test its validity statistically. It also ignores possible confounding differences between the treatment and control groups. Furthermore, how we define the length of time may bias the estimates since the treatment effect varies depending on the period of time observed. 
 
 # Synthetic Control
 
