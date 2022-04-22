@@ -153,7 +153,7 @@ minmax <- medicaid_expansion %>% group_by(year) %>%
 View(minmax)
 ```
 
-Unsurprisingly, that California, the state with the largest population in the US, had the most uninsured population from 2008 to 2013. However, starting 2014, with California's adoption of the Medicaid Expansion, Texas had the most uninsured population until 2020 (the last year of available data). On the other hand, Wyoming had the least uninsured population from 2008 to 2009, but that shifted to Vermont from 2010 until 2020. 
+Unsurprisingly, California, the state with the largest population in the US, had the most uninsured population from 2008 to 2013. However, starting 2014, with California's adoption of the Medicaid Expansion, Texas had the most uninsured population until 2020 (the last year of available data). On the other hand, Wyoming had the least uninsured population from 2008 to 2009, but that shifted to Vermont from 2010 until 2020. 
 
 # Difference-in-Differences Estimation
 
@@ -189,9 +189,7 @@ medicaid_expansion %>%
   xlab('Year') +
   ylab('Uninsured Rate')
 ```
-The parallel trends plot for the uninsured rate over time between California and Florida seems to meet the assumption that the trends between the two states
-were relatively parallel prior to the treatment year, showing fairly similar slopes
-between 2008 to 2014. 
+The parallel trends plot for the uninsured rate over time between California and Florida seems to meet the assumption that the trends between the two states were relatively parallel prior to the treatment year, showing fairly similar slopes between 2008 to 2014. 
 
 - Estimates a difference-in-differences estimate of the effect of the Medicaid expansion on the uninsured share of the population. You may follow the lab example where we estimate the differences in one pre-treatment and one post-treatment period, or take an average of the pre-treatment and post-treatment outcomes
 
