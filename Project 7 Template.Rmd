@@ -153,7 +153,7 @@ minmax <- medicaid_expansion %>% group_by(year) %>%
 View(minmax)
 ```
 
-Unsurprisingly, California, the state with the largest population in the US, had the most uninsured population from 2008 to 2013. However, starting 2014, with California's adoption of the Medicaid Expansion, Texas had the most uninsured population until 2020 (the last year of available data). On the other hand, Wyoming had the least uninsured population from 2008 to 2009, but that shifted to Vermont from 2010 until 2020. 
+Unsurprisingly, California, the state with the largest population in the US, had the largest uninsured population from 2008 to 2013. However, starting 2014, with California's adoption of the Medicaid Expansion, Texas had the most uninsured population until 2020 (the last year of available data). On the other hand, Wyoming had the least uninsured population from 2008 to 2009, but that shifted to Vermont from 2010 until 2020. Wyoming and Vermont are both states with small populations.
 
 # Difference-in-Differences Estimation
 
@@ -164,6 +164,7 @@ Do the following:
 - Choose a state that adopted the Medicaid expansion on January 1, 2014 and a state that did not. **Hint**: Do not pick Massachusetts as it passed a universal healthcare law in 2006, and also avoid picking a state that adopted the Medicaid expansion between 2014 and 2015.
 
 -- States that adopted the expansion on January 1, 2014 include Arizona, Arkansas, California, Delaware, DC, Hawaii, Illinois, Iowa, Maryland, Minnesota, Nevada, New Jersey, New Mexico, New York, North Dakota, Ohio, Oregon, Rhode Island, Vermont, Washington, West Virginia. (Do not pick Kentucky because the date of adoption is listed at January 1, 2014, but in 2015 Kentucky got a new governor who dismantled it.)
+-- States that adopted the expansion later: Alaska, Indiana, Louisiana, Michigan, Montana, Nebraska, New Hampshire, Pennsylvania, Utah, Virginia
 -- States that never adopted the expansion: Alabama, Florida, Georgia, Kansas, Maine, Mississippi, Missouri, North Carolina, Oklahoma, South Carolina, South Dakota, Tennessee, Texas, Wisconsin, Wyoming.
 
 - Assess the parallel trends assumption for your choices using a plot. If you are not satisfied that the assumption has been met, pick another state and try again (but detail the states you tried).
@@ -255,20 +256,143 @@ Do the following:
 
 ```{r}
 # non-augmented synthetic control
-syn = gsynth(uninsured_rate ~ year, medicaid_expansion, )
 
+# Chosen state: Louisiana
+
+# Add a pre/post-treatment indicator
+medicaid_expansion$Year_Adopted = format(medicaid_expansion$Date_Adopted, format="%Y")
+medicaid_expansion$Year_Adopted = as.numeric(medicaid_expansion$Year_Adopted)
+medicaid_expansion$treatment = if_else(medicaid_expansion$Year_Adopted > medicaid_expansion$year, 0, 1, missing=0)
+
+# Add indicator for *LOUISIANA* PRE AND POST TREATMENT
+medicaid_expansion$treatLou = ifelse(medicaid_expansion$State == "Louisiana" & medicaid_expansion$year > 2016, 1, 0)
+
+# Create a synthetic control for Louisiana
+syn_Lou = gsynth(uninsured_rate ~ treatLou, data=medicaid_expansion, Y=uninsured_rate, D=treatLou, index=c("State", "year"), seed = 5, min.T0 = 2, CV = FALSE)
+syn_Lou
+
+syn_Lou$att.avg # ATT = -0.07145
+syn_Lou$sigma2 # Mean squared error of interactive fixed effect model = 0.0009858552
+```
+```{r}
+# Plot the results (both pre-treatment fit and post-treatment differences).
+
+plot(syn_Lou)
+
+sum_syn_Lou <- summary(syn_Lou)
+
+medicaid_syn_Lou <- medicaid_expansion %>%
+  filter(State == "Louisiana") %>%
+  bind_cols(difference = syn_Lou$att) %>%
+  mutate(synthetic_Lou = uninsured_rate + difference)
+
+# Plot
+
+medicaid_syn_Lou %>%
+  ggplot() +
+  geom_point(aes(x = year, 
+                 y = uninsured_rate, 
+                 color = 'Louisiana')) +
+  geom_line(aes(x = year, 
+                y = uninsured_rate, 
+                color = 'Louisiana')) +
+  geom_point(aes(x = year, 
+                 y = synthetic_Lou, 
+                 color = 'Synthetic Louisiana')) +
+  geom_line(aes(x = year, 
+                y = synthetic_Lou, 
+                color = 'Synthetic Louisiana')) +
+  scale_color_manual(values = c('Louisiana' = 'red', 'Synthetic Louisiana' = 'blue')) +
+  geom_vline(aes(xintercept = 2016.5)) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text()) +
+  ggtitle('Louisiana and Synthetic Louisiana') +
+  xlab('Year') +
+  ylab('Uninsured Rate')
+# The fit is not great because there is actually a staggered adoption of the treatment that is not being taken into consideration in this model.
 ```
 
 - Re-run the same analysis but this time use an augmentation (default choices are Ridge, Matrix Completion, and GSynth). Create the same plot and report the average ATT and L2 imbalance.
 
 ```{r}
 # augmented synthetic control
+augsyn <- augsynth(uninsured_rate ~ treatment, State, year, medicaid_expansion,
+                    progfunc = "ridge", scm = T)
+augsyn
+plot(augsyn)
+# This ran as multisynth
+# ATT is -0.010
+# Plot doesn't know which state it should be making a synthetic control from.
+
+augsyn_Lou <- augsynth(uninsured_rate ~ treatLou, State, year, medicaid_expansion,
+                    progfunc = "ridge", scm = T)
+augsyn_Lou
+# This ran as single_augsynth
+# ATT is -0.026
+
+sum_augsyn_Lou = summary(augsyn_Lou)
+sum_augsyn_Lou$average_att$Estimate # ATT is -0.02570572
+sum_augsyn_Lou$l2_imbalance #L2 Imbalance is 0.00513934
+
+plot(augsyn_Lou) # The fit of this graph is much better than when using gsynth.
+```
+```{r}
+sum_augsyn_Lou <- summary(augsyn_Lou)
+
+medicaid_augsyn_Lou <- medicaid_syn_Lou %>%
+  filter(State == "Louisiana") %>%
+  bind_cols(aug_difference = sum_augsyn_Lou$att$Estimate) %>%
+  mutate(aug_synthetic_Lou = uninsured_rate + aug_difference)
+
+medicaid_augsyn_Lou %>%
+  ggplot() +
+  geom_point(aes(x = year, 
+                 y = uninsured_rate, 
+                 color = 'Louisiana')) +
+  geom_line(aes(x = year, 
+                y = uninsured_rate, 
+                color = 'Louisiana')) +
+  geom_point(aes(x = year, 
+                 y = synthetic_Lou, 
+                 color = 'Synthetic Louisiana')) +
+  geom_line(aes(x = year, 
+                y = synthetic_Lou, 
+                color = 'Synthetic Louisiana')) +
+  geom_point(aes(x = year, 
+                 y = aug_synthetic_Lou, 
+                 color = 'Augmented Synthetic Louisiana')) +
+  geom_line(aes(x = year, 
+                y = aug_synthetic_Lou, 
+                color = 'Augmented Synthetic Louisiana')) +
+  scale_color_manual(values = c('Louisiana' = 'red', 'Synthetic Louisiana' = 'blue', 'Augmented Synthetic Louisiana' = 'green')) +
+  geom_vline(aes(xintercept = 2016.5)) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text()) +
+  ggtitle('Louisiana, Synthetic Louisiana, and Augmented Synthetic Louisiana') +
+  xlab('Year') +
+  ylab('Uninsured Rate')
+
+#Augmented Synthetic Louisiana is a much better pre-treatment match than the Synthetic.
 ```
 
 - Plot barplots to visualize the weights of the donors.
 
 ```{r}
 # barplots of weights
+data.frame(augsyn_Lou$weights) %>%
+  # change index to a column
+  tibble::rownames_to_column('State') %>%
+  ggplot() +
+  # stat = identity to take the literal value instead of a count for geom_bar()
+  geom_bar(aes(x = State, 
+               y = augsyn_Lou.weights),
+           stat = 'identity') +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        axis.text.x = element_text(angle = 90)) +
+  ggtitle('Synthetic Control Weights') +
+  xlab('State') +
+  ylab('Weight') 
 ```
 
 **HINT**: Is there any preprocessing you need to do before you allow the program to automatically find weights for donor states?
@@ -277,10 +401,10 @@ syn = gsynth(uninsured_rate ~ year, medicaid_expansion, )
 
 
 - What are the advantages and disadvantages of synthetic control compared to difference-in-differences estimators?
-- **Answer**: 
+- **Answer**: The synthetic control can meet the parallel assumptions trend more precisely.
 
 - One of the benefits of synthetic control is that the weights are bounded between [0,1] and the weights must sum to 1. Augmentation might relax this assumption by allowing for negative weights. Does this create an interpretation problem, and how should we balance this consideration against the improvements augmentation offers in terms of imbalance in the pre-treatment period?
-- **Answer**:
+- **Answer**: It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
 
 # Staggered Adoption Synthetic Control
 
