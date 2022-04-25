@@ -146,11 +146,13 @@ Before 2014, the state that had the highest uninsured rate varied slightly. From
 medicaid_expansion$pop_uninsured <- medicaid_expansion$uninsured_rate * medicaid_expansion$population 
 
 minmax <- medicaid_expansion %>% group_by(year) %>% 
-  summarize(min = min(pop_uninsured), 
+  summarize(min = min(pop_uninsured, na.rm = T), 
             minState = State[which.min(pop_uninsured)],
-            max =max(pop_uninsured), 
+            max =max(pop_uninsured, na.rm = T), 
             maxState = State[which.max(pop_uninsured)])
-View(minmax)
+minmax
+
+# KSH: I have removed the view command to show the results in te markdown file instead and included na.rm=T when we find min max (So we do not get NAs in the data frame)
 ```
 
 Unsurprisingly, California, the state with the largest population in the US, had the largest uninsured population from 2008 to 2013. However, starting 2014, with California's adoption of the Medicaid Expansion, Texas had the most uninsured population until 2020 (the last year of available data). On the other hand, Wyoming had the least uninsured population from 2008 to 2009, but that shifted to Vermont from 2010 until 2020. Wyoming and Vermont are both states with small populations.
@@ -173,6 +175,7 @@ Do the following:
 # Parallel Trends plot
 
 #We also tried California-Texas, California-Pennsylvania
+# KSH: Did they work?
 
 medicaid_expansion %>%
   filter(State %in% c("California","Florida")) %>%
@@ -234,12 +237,15 @@ Looking at the difference-in-differences estimation for the uninsured rate, the 
 ## Discussion Questions
 
 - Card/Krueger's original piece utilized the fact that towns on either side of the Delaware river are likely to be quite similar to one another in terms of demographics, economics, etc. Why is that intuition harder to replicate with this data?
+
 - **Answer**:
+
 The intuition that neighboring towns are similar to each other is harder to replicate with this data because the units are states, which are vastly different in demographics, economy, etc. More significantly, states have their own governing bodies determining the adoption of federal legislation like the Affordable Care Act that are unrelated to their geographic location. 
 
 - What are the strengths and weaknesses of using the parallel trends assumption in difference-in-differences estimates?
 
 - **Answer**:
+
 A key strength of using the parallel trends assumption in DiD estimates is that we can use the untreated or control group as the counterfactual to the treated group and visually ascertain that trends over time between groups before treatment are generally constant. If the assumption is met, we can take the pre and post-treatment of the untreated group and compare it to the treated group to measure the treatment effect. The assumption also considers both time and selection bias and produces one estimate.
 
 A critical weakness of this assumption is that there is no method to test its validity statistically. It also ignores possible confounding differences between the treatment and control groups. Furthermore, how we define the length of time may bias the estimates since the treatment effect varies depending on the period of time observed. 
@@ -253,6 +259,14 @@ Although several states did not expand Medicaid on January 1, 2014, many did lat
 Do the following:
 
 - Choose a state that adopted the Medicaid expansion after January 1, 2014. Construct a non-augmented synthetic control and plot the results (both pre-treatment fit and post-treatment differences). Also report the average ATT and L2 imbalance.
+
+- **Answer**:
+
+We choose to investigate the state of Louisiana. Since the time measure of the data set is years, we need to convert the date of adoption to years in th column `Year_Adopted`. This essentially means that we assume that a state is treated from the 1. of January the year it adopted the Medicaid expansion.
+
+We also create an indicator (treatment) that equals 1 if the observation is a treated state meaning it has adopted the Medicaid expansion at the time of observation and 0 otherwise.
+
+Finally, we fit the model for Louisiana as an on-augmented synthetic control and plot the results.
 
 ```{r}
 # non-augmented synthetic control
@@ -274,6 +288,8 @@ syn_Lou
 syn_Lou$att.avg # ATT = -0.07145
 syn_Lou$sigma2 # Mean squared error of interactive fixed effect model = 0.0009858552
 ```
+
+
 ```{r}
 # Plot the results (both pre-treatment fit and post-treatment differences).
 
@@ -313,6 +329,8 @@ medicaid_syn_Lou %>%
 ```
 
 - Re-run the same analysis but this time use an augmentation (default choices are Ridge, Matrix Completion, and GSynth). Create the same plot and report the average ATT and L2 imbalance.
+
+- **Answer**:
 
 ```{r}
 # augmented synthetic control
@@ -368,7 +386,7 @@ medicaid_augsyn_Lou %>%
   geom_vline(aes(xintercept = 2016.5)) +
   theme_fivethirtyeight() +
   theme(axis.title = element_text()) +
-  ggtitle('Louisiana, Synthetic Louisiana, and Augmented Synthetic Louisiana') +
+  ggtitle('Louisiana, Synthetic Louisiana, \nand Augmented Synthetic Louisiana') +
   xlab('Year') +
   ylab('Uninsured Rate')
 
@@ -401,10 +419,16 @@ data.frame(augsyn_Lou$weights) %>%
 
 
 - What are the advantages and disadvantages of synthetic control compared to difference-in-differences estimators?
-- **Answer**: The synthetic control can meet the parallel assumptions trend more precisely.
+
+- **Answer**: 
+
+The synthetic control can meet the parallel trend assumptions more precisely.
 
 - One of the benefits of synthetic control is that the weights are bounded between [0,1] and the weights must sum to 1. Augmentation might relax this assumption by allowing for negative weights. Does this create an interpretation problem, and how should we balance this consideration against the improvements augmentation offers in terms of imbalance in the pre-treatment period?
-- **Answer**: It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
+
+- **Answer**: 
+
+It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
 
 # Staggered Adoption Synthetic Control
 
@@ -414,28 +438,95 @@ Do the following:
 
 - Estimate a multisynth model that treats each state individually. Choose a fraction of states that you can fit on a plot and examine their treatment effects.
 
+- **Answer**:
+
+We run the model that treats each state individually. This is done by setting `nu` equal to zero. `nu` determines how much pooling to do. A value of 0 will fit a separate synthetic control for each model, whereas a value of 1 will pool all units together. Leaving this argument blank will have `multisynth` search for the best value of `nu` that minimizes L2 loss. We also `n_leads`= 5, which determines how long past treatment effects should be estimated for. For some states there are fewer than 5 post treatment periods and for these states, it is just not possible to calculate the difference between synthetic control and treatment in all 5 periods. 
+
 ```{r}
-# multisynth model states
+multi_syn_state <- multisynth(uninsured_rate ~ treatment, State, year, medicaid_expansion, nu = 0, n_leads = 5)
+multi_syn_state
 ```
 
-- Estimate a multisynth model using time cohorts. For the purpose of this exercise, you can simplify the treatment time so that states that adopted Medicaid expansion within the same year (i.e. all states that adopted epxansion in 2016) count for the same cohort. Plot the treatment effects for these time cohorts.
+The average ATT across all treated states and periods is -0.015. The adoption of Medicare expansion on average decreased the uninsured rate by 1.5 percent points. 
+
+After we have fitted the model we use the `summary()` function to get the ATT and balance statistics for the different states.
+
+```{r}
+multi_syn_state_summ <- summary(multi_syn_state)
+multi_syn_state_summ
+```
+
+We can see that the further in time an observation is the bigger is the effect of the treatment. At least that is the general picture. The l2 imbalance is reported to be ??????? which means ???????
+
+Next, we plot the estimates for a selection of states as well as the average treatment effect (so average for all treated states). 
+
+```{r}
+# We choose only states that have at least five post treatment periods for easier comparison. 
+multi_syn_state_summ$att %>%
+  filter(Level %in% c("Average", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Hawaii", "Illinois", "Iowa")) %>%
+  ggplot(aes(x = Time, y = Estimate, color = Level)) +
+  geom_point() +
+  geom_line() +
+  geom_vline(xintercept = 0) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        legend.position = "bottom") +
+  ggtitle('Synthetic Controls for each state \nlooking at the effect of the State Medicare expansion') +
+  xlab('Time') +
+  ylab('Medicare expansion Estimate')
+```
+
+Even though, we found that the State Medicare expansion decreased the uninsurance rate, there seems to be heterogeneous effects across states. In most of the states, the treatment has the intended effects, however, we also observe states where the effect is opposite (e.g. District of Columbia). The pattern of increasing ATTs over time seems to be general across states, but again there seems to be exceptions. 
+
+- Estimate a multisynth model using time cohorts. For the purpose of this exercise, you can simplify the treatment time so that states that adopted Medicaid expansion within the same year (i.e. all states that adopted expansion in 2016) count for the same cohort. Plot the treatment effects for these time cohorts.
+
+- **Answer**:
+
+When using the time cohorts to pool together units, we pool together states that adopted Medicaid expansion within the same year, instead of based on ????????????????. 
 
 ```{r}
 # multisynth model time cohorts
+multi_syn_time <- multisynth(uninsured_rate ~ treatment, State, year, medicaid_expansion, n_leads = 5, time_cohort = TRUE)
+
+multi_syn_time
+
+multi_syn_time_summ <- summary(multi_syn_time)
+
+multi_syn_time_summ
+
 ```
 
-## Discussion Questions
+Now the average ATT estimate across all states and periods is -0.014, which is very similar to what we found above. The adoption of Medicare expansion on average decreased the uninsured rate by 1.4 percent points. The L2 imbalance is reported to be ????? which is ??????. Again a pattern of an increasing treatment effect appears, where higher effects are seen the further away the observation is from time of treatment. 
 
-- One feature of Medicaid is that it is jointly administered by the federal government and the states, and states have some flexibility in how they implement Medicaid. For example, during the Trump administration, several states applied for waivers where they could add work requirements to the eligibility standards (i.e. an individual needed to work for 80 hours/month to qualify for Medicaid). Given these differences, do you see evidence for the idea that different states had different treatment effect sizes?
-- **Answer**: 
+Next, we plot our results with the differences between our cohorts and the synthetic controls. 
 
-- Do you see evidence for the idea that early adopters of Medicaid expansion enjoyed a larger decrease in the uninsured population?
-- **Answer**: 
+```{r}
+multi_syn_time_summ$att %>%
+  ggplot(aes(x = Time, y = Estimate, color = Level)) +
+  geom_point() +
+  geom_line() +
+  geom_vline(xintercept = 0) +
+  theme_fivethirtyeight() +
+  theme(axis.title = element_text(),
+        legend.position = 'None') +
+  ggtitle('Synthetic Controls for each treatment year \nlooking at the effect of the State Medicare expansion') +
+  xlab('Time') +
+  ylab('Medicare expansion Estimate') +
+  facet_wrap(~Level)
+```
+
+Like when we where comparing effects at the state level, there also seems to be heterogenous effects depending on the time of treatment. The effect of the treatment seems to be much larger on states which implemented it early compared to states that implemented it late. 
 
 # General Discussion Questions
 
-- Why are DiD and  synthetic control estimates well suited to studies of aggregated units like cities, states, countries, etc?
+- Why are DiD and synthetic control estimates well suited to studies of aggregated units like cities, states, countries, etc?
+
 - **Answer**:
 
+
+
 - What role does selection into treatment play in DiD/synthetic control versus regression discontinuity? When would we want to use either method?
+
 - **Answer**:
+
+
