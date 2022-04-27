@@ -279,7 +279,7 @@ medicaid_expansion$Year_Adopted = as.numeric(medicaid_expansion$Year_Adopted)
 medicaid_expansion$treatment = if_else(medicaid_expansion$Year_Adopted > medicaid_expansion$year, 0, 1, missing=0)
 
 # Add indicator for *LOUISIANA* PRE AND POST TREATMENT
-medicaid_expansion$treatLou = ifelse(medicaid_expansion$State == "Louisiana" & medicaid_expansion$year > 2016, 1, 0)
+medicaid_expansion$treatLou = ifelse(medicaid_expansion$State == "Louisiana" & medicaid_expansion$year >= 2016, 1, 0)
 
 # Create a synthetic control for Louisiana
 syn_Lou = gsynth(uninsured_rate ~ treatLou, data=medicaid_expansion, Y=uninsured_rate, D=treatLou, index=c("State", "year"), seed = 5, min.T0 = 2, CV = FALSE)
@@ -521,12 +521,12 @@ Like when we where comparing effects at the state level, there also seems to be 
 
 - Why are DiD and synthetic control estimates well suited to studies of aggregated units like cities, states, countries, etc?
 
-- **Answer**:
+- **Answer**: 
 
 
 
 - What role does selection into treatment play in DiD/synthetic control versus regression discontinuity? When would we want to use either method?
 
-- **Answer**:
+- **Answer**: Fuzzy RD can accommodate situations where there is potentiall selection bias, and strong RD assumes no selection bias. 
 
 
