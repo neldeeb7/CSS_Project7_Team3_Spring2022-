@@ -152,7 +152,6 @@ minmax <- medicaid_expansion %>% group_by(year) %>%
             maxState = State[which.max(pop_uninsured)])
 minmax
 
-# KSH: I have removed the view command to show the results in te markdown file instead and included na.rm=T when we find min max (So we do not get NAs in the data frame)
 ```
 
 Unsurprisingly, California, the state with the largest population in the US, had the largest uninsured population from 2008 to 2013. However, starting 2014, with California's adoption of the Medicaid Expansion, Texas had the most uninsured population until 2020 (the last year of available data). On the other hand, Wyoming had the least uninsured population from 2008 to 2009, but that shifted to Vermont from 2010 until 2020. Wyoming and Vermont are both states with small populations.
@@ -174,8 +173,7 @@ Do the following:
 ```{r}
 # Parallel Trends plot
 
-#We also tried California-Texas, California-Pennsylvania
-# KSH: Did they work?
+#We selected states that were comparable with regards to population that did not adopt the Medicaid expansion in 2014 to plot for parallel trends. We tried California-Texas, California-Pennsylvania, however they did not meet the parallel trends assumption. California-Florida did meet the assumption. 
 
 medicaid_expansion %>%
   filter(State %in% c("California","Florida")) %>%
@@ -239,7 +237,6 @@ Looking at the difference-in-differences estimation for the uninsured rate, the 
 - Card/Krueger's original piece utilized the fact that towns on either side of the Delaware river are likely to be quite similar to one another in terms of demographics, economics, etc. Why is that intuition harder to replicate with this data?
 
 - **Answer**:
-
 The intuition that neighboring towns are similar to each other is harder to replicate with this data because the units are states, which are vastly different in demographics, economy, etc. More significantly, states have their own governing bodies determining the adoption of federal legislation like the Affordable Care Act that are unrelated to their geographic location. 
 
 - What are the strengths and weaknesses of using the parallel trends assumption in difference-in-differences estimates?
@@ -262,7 +259,7 @@ Do the following:
 
 - **Answer**:
 
-We choose to investigate the state of Louisiana. Since the time measure of the data set is years, we need to convert the date of adoption to years in th column `Year_Adopted`. This essentially means that we assume that a state is treated from the 1. of January the year it adopted the Medicaid expansion.
+We choose to investigate the state of Louisiana. Since the time measure of the data set is years, we need to convert the date of adoption to years in th column `Year_Adopted`. This essentially means that we assume that a state is treated from the 1st of January the year it adopted the Medicaid expansion.
 
 We also create an indicator (treatment) that equals 1 if the observation is a treated state meaning it has adopted the Medicaid expansion at the time of observation and 0 otherwise.
 
@@ -331,6 +328,7 @@ medicaid_syn_Lou %>%
 - Re-run the same analysis but this time use an augmentation (default choices are Ridge, Matrix Completion, and GSynth). Create the same plot and report the average ATT and L2 imbalance.
 
 - **Answer**:
+The average ATT is -0.026 and the L2 imbalance is 0.005. 
 
 ```{r}
 # augmented synthetic control
@@ -340,7 +338,7 @@ augsyn
 plot(augsyn)
 # This ran as multisynth
 # ATT is -0.010
-# Plot doesn't know which state it should be making a synthetic control from.
+# Plot doesn't know which state it should be making a synthetic control from so we regressed it on treatLou which solely looks at Louisana. 
 
 augsyn_Lou <- augsynth(uninsured_rate ~ treatLou, State, year, medicaid_expansion,
                     progfunc = "ridge", scm = T)
@@ -421,14 +419,13 @@ data.frame(augsyn_Lou$weights) %>%
 - What are the advantages and disadvantages of synthetic control compared to difference-in-differences estimators?
 
 - **Answer**: 
-
-The synthetic control can meet the parallel trend assumptions more precisely.
+Advantages: The synthetic control can meet the parallel trend assumptions more precisely. Additionally it uses multiple units to match as opposed to just one unit. 
+Disadvantages: If there is staggered adoption then augmented synthetic control does not work because those units may have already adopted the treatment. 
 
 - One of the benefits of synthetic control is that the weights are bounded between [0,1] and the weights must sum to 1. Augmentation might relax this assumption by allowing for negative weights. Does this create an interpretation problem, and how should we balance this consideration against the improvements augmentation offers in terms of imbalance in the pre-treatment period?
 
 - **Answer**: 
-
-It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
+It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. The weights are no longer a measure of similarity Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
 
 # Staggered Adoption Synthetic Control
 
@@ -440,7 +437,7 @@ Do the following:
 
 - **Answer**:
 
-We run the model that treats each state individually. This is done by setting `nu` equal to zero. `nu` determines how much pooling to do. A value of 0 will fit a separate synthetic control for each model, whereas a value of 1 will pool all units together. Leaving this argument blank will have `multisynth` search for the best value of `nu` that minimizes L2 loss. We also `n_leads`= 5, which determines how long past treatment effects should be estimated for. For some states there are fewer than 5 post treatment periods and for these states, it is just not possible to calculate the difference between synthetic control and treatment in all 5 periods. 
+We run the model that treats each state individually. This is done by setting `nu` equal to zero. `nu` determines how much pooling to do. A value of 0 will fit a separate synthetic control for each model, whereas a value of 1 will pool all units together. Leaving this argument blank will have `multisynth` search for the best value of `nu` that minimizes L2 loss. We also chose `n_leads`= 5, which determines how long past treatment effects should be estimated for. For some states there are fewer than 5 post treatment periods and for these states, it is just not possible to calculate the difference between synthetic control and treatment in all 5 periods. 
 
 ```{r}
 multi_syn_state <- multisynth(uninsured_rate ~ treatment, State, year, medicaid_expansion, nu = 0, n_leads = 5)
@@ -456,7 +453,7 @@ multi_syn_state_summ <- summary(multi_syn_state)
 multi_syn_state_summ
 ```
 
-We can see that the further in time an observation is the bigger is the effect of the treatment. At least that is the general picture. The l2 imbalance is reported to be ??????? which means ???????
+We can see that the further in time an observation is the bigger is the effect of the treatment. At least that is the general picture. The global L2 is reported at 0.001 which means there is little imbalance between the multisynthetic control and treatment. 
 
 Next, we plot the estimates for a selection of states as well as the average treatment effect (so average for all treated states). 
 
@@ -496,7 +493,7 @@ multi_syn_time_summ
 
 ```
 
-Now the average ATT estimate across all states and periods is -0.014, which is very similar to what we found above. The adoption of Medicare expansion on average decreased the uninsured rate by 1.4 percent points. The L2 imbalance is reported to be ????? which is ??????. Again a pattern of an increasing treatment effect appears, where higher effects are seen the further away the observation is from time of treatment. 
+Now the average ATT estimate across all states and periods is -0.014, which is very similar to what we found above. The adoption of Medicare expansion on average decreased the uninsured rate by 1.4 percent points. The global L2 imbalance is reported to be 0.001 which is the same as earlier indicating there is little imbalance between the multisynethic time cohort control and treatment. Again a pattern of an increasing treatment effect appears, where higher effects are seen the further away the observation is from time of treatment. 
 
 Next, we plot our results with the differences between our cohorts and the synthetic controls. 
 
@@ -515,18 +512,21 @@ multi_syn_time_summ$att %>%
   facet_wrap(~Level)
 ```
 
-Like when we where comparing effects at the state level, there also seems to be heterogenous effects depending on the time of treatment. The effect of the treatment seems to be much larger on states which implemented it early compared to states that implemented it late. 
+Like when we where comparing effects at the state level, there also seems to be heterogenous effects depending on the time of treatment. The effect of the treatment seems to be much larger on states which implemented the Medicaid expansion earlier compared to states that implemented it later. 
 
 # General Discussion Questions
 
 - Why are DiD and synthetic control estimates well suited to studies of aggregated units like cities, states, countries, etc?
 
-- **Answer**: 
-
+- **Answer**: Both DiD and synthetic control enable us to compare generalizable trends more than individual-level data units. If DiD was estimated at the individual level there would be no external validity. 
 
 
 - What role does selection into treatment play in DiD/synthetic control versus regression discontinuity? When would we want to use either method?
 
-- **Answer**: Fuzzy RD can accommodate situations where there is potentiall selection bias, and strong RD assumes no selection bias. 
+- **Answer**: Fuzzy RD can accommodate situations where there is potential selection bias, and strong RD assumes no selection bias. RD assumes that a selection is occurring for all subjects at the same time at a particular threshold, while DiD/synthetic control allow for broader periods of time for interventions to be adopted. RD assumes comparability of units immediately next to the threshold vs. synthetic control uses weights to calculate the comparability between the control and treatment. In DiD, time-varying confounders are more accounted for than in RD. We can thus be more confident that discontinuities/disruption of parallel trends is not caused by a confounder.
 
+NE ADDED: 
+RD has limitations with its external validity because its hard to generalize units far from the cutoff point while DiD/synthetic control have better external validity because they accounts for parallel and time-varying trends. 
+
+RD is more useful to use when comparing groups that differ only in treatment while DiD compares groups that differ in both time and other variables assuming that the difference in outcomes is constant under the period of study. 
 
