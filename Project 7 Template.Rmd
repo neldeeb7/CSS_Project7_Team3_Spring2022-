@@ -425,7 +425,7 @@ Disadvantages: If there is staggered adoption then augmented synthetic control d
 - One of the benefits of synthetic control is that the weights are bounded between [0,1] and the weights must sum to 1. Augmentation might relax this assumption by allowing for negative weights. Does this create an interpretation problem, and how should we balance this consideration against the improvements augmentation offers in terms of imbalance in the pre-treatment period?
 
 - **Answer**: 
-It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. The weights are no longer a measure of similarity Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
+It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. The weights are no longer a measure of similarity. Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
 
 # Staggered Adoption Synthetic Control
 
@@ -518,7 +518,7 @@ Like when we where comparing effects at the state level, there also seems to be 
 
 - Why are DiD and synthetic control estimates well suited to studies of aggregated units like cities, states, countries, etc?
 
-- **Answer**: Both DiD and synthetic control enable us to compare generalizable trends more than individual-level data units. If DiD was estimated at the individual level there would be no external validity. 
+- **Answer**: Both DiD and synthetic control enable us to compare generalizable trends more than individual-level data units. If DiD was estimated at the individual level there would be no external validity. Think of the example, where we would investigate the effect on alcohol consumption from some policy intervention. Our research would be much more generalizeable if look at schools, cities, municipality, states, etc. than if we just compared one persen to another before and after. 
 
 
 - What role does selection into treatment play in DiD/synthetic control versus regression discontinuity? When would we want to use either method?
