@@ -425,7 +425,9 @@ Disadvantages: If there is staggered adoption then augmented synthetic control d
 - One of the benefits of synthetic control is that the weights are bounded between [0,1] and the weights must sum to 1. Augmentation might relax this assumption by allowing for negative weights. Does this create an interpretation problem, and how should we balance this consideration against the improvements augmentation offers in terms of imbalance in the pre-treatment period?
 
 - **Answer**: 
-It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. The weights are no longer a measure of similarity. Ultimately, I think that as long as the error terms are small and there is a match pre-treatment, it is not a problem. 
+It does create an interpretation problem if the graph/visual representation of weights does not display negative weights. When the weights are bounded between [0,1], we can use the weights to see how much a donor state has contributed to a synthetic control and hereby we know what the synthetic control consists of. This is no longer the case, when the weights are not bounded. If a donor state e.g. has a weight=1, we no longer knnow whether this is a large or small weight since this cannot be interpreted in relation to 1, but instead in relation to the sizes of all the different weights. 
+
+In a causal analysis, it is an advantages to know, what your control practically consists of. For instance, we would be worried if a synthetic control for California was an average between Alaska and Alabama, and would probably look into whether any mistakes have occurred or we whether need to include some important variables. This is not an opportunity with Augmentation. With Augmentation we get a better balance, but we cannot use the wights to determine whether the balance makes sense. 
 
 # Staggered Adoption Synthetic Control
 
@@ -479,7 +481,7 @@ Even though, we found that the State Medicare expansion decreased the uninsuranc
 
 - **Answer**:
 
-When using the time cohorts to pool together units, we pool together states that adopted Medicaid expansion within the same year, instead of based on ????????????????. 
+When using the time cohorts to pool together units, we pool together states that adopted Medicaid expansion within the same year. 
 
 ```{r}
 # multisynth model time cohorts
@@ -518,7 +520,7 @@ Like when we where comparing effects at the state level, there also seems to be 
 
 - Why are DiD and synthetic control estimates well suited to studies of aggregated units like cities, states, countries, etc?
 
-- **Answer**: Both DiD and synthetic control enable us to compare generalizable trends more than individual-level data units. If DiD was estimated at the individual level there would be no external validity. Think of the example, where we would investigate the effect on alcohol consumption from some policy intervention. Our research would be much more generalizeable if look at schools, cities, municipality, states, etc. than if we just compared one persen to another before and after. 
+- **Answer**: Both DiD and synthetic control enable us to compare generalizable trends more than individual-level data units. If DiD was estimated at the individual level there would be little external validity. Think of the example, where we would investigate the effect on alcohol consumption from some policy intervention. Our research would be much more generalizeable if we look at schools, cities, municipality, states, etc. than if we just compared one person to another before and after. 
 
 
 - What role does selection into treatment play in DiD/synthetic control versus regression discontinuity? When would we want to use either method?
