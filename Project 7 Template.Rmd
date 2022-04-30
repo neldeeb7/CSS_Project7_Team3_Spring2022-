@@ -525,8 +525,5 @@ Like when we where comparing effects at the state level, there also seems to be 
 
 - **Answer**: Fuzzy RD can accommodate situations where there is potential selection bias, and strong RD assumes no selection bias. RD assumes that a selection is occurring for all subjects at the same time at a particular threshold, while DiD/synthetic control allow for broader periods of time for interventions to be adopted. RD assumes comparability of units immediately next to the threshold vs. synthetic control uses weights to calculate the comparability between the control and treatment. In DiD, time-varying confounders are more accounted for than in RD. We can thus be more confident that discontinuities/disruption of parallel trends is not caused by a confounder.
 
-NE ADDED: 
-RD has limitations with its external validity because its hard to generalize units far from the cutoff point while DiD/synthetic control have better external validity because they accounts for parallel and time-varying trends. 
-
-RD is more useful to use when comparing groups that differ only in treatment while DiD compares groups that differ in both time and other variables assuming that the difference in outcomes is constant under the period of study. 
+RD has limitations with its external validity because its hard to generalize units far from the cutoff point while DiD/synthetic control have better external validity because they account for parallel and time-varying trends. RD is more useful to use when comparing groups that differ only in treatment while DiD compares groups that differ in both time and other variables assuming that the difference in outcomes is constant under the period of study. 
 
